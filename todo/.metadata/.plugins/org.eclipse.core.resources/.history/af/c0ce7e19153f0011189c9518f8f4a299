@@ -1,0 +1,66 @@
+package com.info.tod;
+
+import javafx.application.Application;
+import javafx.scene.Scene;
+import javafx.scene.control.*;
+import javafx.scene.layout.VBox;
+import javafx.stage.Stage;
+
+public class MainApp extends Application {
+
+    ListView<Task> listView = new ListView<>();
+
+    @Override
+    public void start(Stage stage) {
+
+        TextField input = new TextField();
+        input.setPromptText("Enter task");
+
+        Button addBtn = new Button("Add Task");
+        Button deleteBtn = new Button("Delete Selected");
+
+        addBtn.setOnAction(e -> {
+            try {
+                TaskDAO.addTask(input.getText());
+                refresh();
+                input.clear();
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+        });
+
+        deleteBtn.setOnAction(e -> {
+            Task selected = listView.getSelectionModel().getSelectedItem();
+            if (selected != null) {
+                try {
+                    TaskDAO.deleteTask(selected.id);
+                    refresh();
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+            }
+        });
+
+        VBox root = new VBox(10, input, addBtn, deleteBtn, listView);
+
+        Scene scene = new Scene(root, 400, 400);
+
+        stage.setTitle("To-Do List App");
+        stage.setScene(scene);
+        stage.show();
+
+        refresh();
+    }
+
+    private void refresh() {
+        try {
+            listView.getItems().setAll(TaskDAO.getTasks());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void main(String[] args) {
+        launch();
+    }
+}

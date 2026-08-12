@@ -1,0 +1,25 @@
+package com.info.tod;
+
+public class Task {
+    private int id;
+    private String title;
+    private String status;
+    private int points;
+
+    public Task(int id, String title, String status, int points) {
+        this.id = id;
+        this.title = title;
+        this.status = status;
+        this.points = points;
+    }
+
+    public int getId() { return id; }
+    public String getTitle() { return title; }
+    public String getStatus() { return status; }
+    public int getPoints() { return points; }
+
+    @Override
+    public String toString() {
+        return title + " [" + status + "]";
+    }
+}

@@ -1,0 +1,43 @@
+package com.info.tod;
+
+import java.sql.*;
+import java.util.*;
+
+public class TaskDAO {
+
+    public static void addTask(String title) throws Exception {
+        Connection con = DBConnection.getConnection();
+        String query = "INSERT INTO tasks(title, status) VALUES (?, 'Pending')";
+        PreparedStatement ps = con.prepareStatement(query);
+        ps.setString(1, title);
+        ps.executeUpdate();
+        con.close();
+    }
+
+    public static List<Task> getTasks() throws Exception {
+        Connection con = DBConnection.getConnection();
+        List<Task> list = new ArrayList<>();
+
+        Statement st = con.createStatement();
+        ResultSet rs = st.executeQuery("SELECT * FROM tasks");
+
+        while (rs.next()) {
+            list.add(new Task(
+                rs.getInt("id"),
+                rs.getString("title"),
+                rs.getString("status")
+            ));
+        }
+
+        con.close();
+        return list;
+    }
+
+    public static void deleteTask(int id) throws Exception {
+        Connection con = DBConnection.getConnection();
+        PreparedStatement ps = con.prepareStatement("DELETE FROM tasks WHERE id=?");
+        ps.setInt(1, id);
+        ps.executeUpdate();
+        con.close();
+    }
+}

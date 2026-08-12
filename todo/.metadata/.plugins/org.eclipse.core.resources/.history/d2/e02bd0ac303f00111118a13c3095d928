@@ -1,0 +1,246 @@
+package com.info.tod;
+import javafx.application.Application;
+import javafx.geometry.Insets;
+import javafx.scene.Scene;
+import javafx.scene.control.*;
+import javafx.scene.layout.*;
+import javafx.stage.Stage;
+
+public class TodoApp extends Application {
+
+    private ListView<HBox> listView = new ListView<>();
+    private ProgressBar progressBar = new ProgressBar(0);
+    private Label percentLabel = new Label();
+
+    private TextField searchField = new TextField();
+    private ComboBox<String> filterBox = new ComboBox<>();
+
+    private void load() {
+        try {
+            listView.getItems().clear();
+
+            var tasks = DBHelper.getTasks();
+            int completed = 0;
+
+            for (Task t : tasks) {
+
+                if (!t.getTask().toLowerCase().contains(searchField.getText().toLowerCase()))
+                    continue;
+
+                if ("Completed".equals(filterBox.getValue()) && !t.isCompleted()) continue;
+                if ("Pending".equals(filterBox.getValue()) && t.isCompleted()) continue;
+
+               
+                CheckBox check = new CheckBox();
+                check.setSelected(t.isCompleted());
+
+                // ✅ Task Name
+                Label label = new Label(t.getTask());
+                label.setStyle("-fx-font-size:16px;");
+
+                if (t.isCompleted()) {
+                    label.setStyle("-fx-font-size:16px; -fx-strikethrough:true;");
+                    completed++;
+                }
+
+                // ✅ Due Date
+                Label dateLabel = new Label(
+                        t.getDueDate() == null ? "No Date" : t.getDueDate().toString()
+                );
+                dateLabel.setStyle("-fx-text-fill:gray; -fx-font-size:13px;");
+
+                // ✅ Priority Badge
+                Label priorityLabel = new Label(t.getPriority());
+                String color = switch (t.getPriority()) {
+                    case "High" -> "#ff5252";
+                    case "Medium" -> "#ffca28";
+                    default -> "#66bb6a";
+                };
+
+                priorityLabel.setStyle(
+                        "-fx-background-color:" + color + ";" +
+                        "-fx-text-fill:black;" +
+                        "-fx-padding:3 8;" +
+                        "-fx-background-radius:10;"
+                );
+
+                // ✅ Edit Field
+                TextField editField = new TextField(t.getTask());
+                editField.setVisible(false);
+                
+                StackPane taskStack = new StackPane();
+                taskStack.getChildren().addAll(label, editField);
+
+                // default visibility
+                label.setVisible(true);
+                editField.setVisible(false);
+
+                // alignment (VERY IMPORTANT)
+                StackPane.setAlignment(label, javafx.geometry.Pos.CENTER_LEFT);
+                StackPane.setAlignment(editField, javafx.geometry.Pos.CENTER_LEFT);
+
+                // allow full width
+                taskStack.setMaxWidth(Double.MAX_VALUE);
+                HBox.setHgrow(taskStack, Priority.ALWAYS);
+
+                // 🔥 ICON BUTTONS
+                Button editBtn = new Button("✏");
+                editBtn.setStyle("-fx-background-color:#FFD54F; -fx-background-radius:50; -fx-min-width:40; -fx-min-height:40;");
+
+                Button saveBtn = new Button("✔");
+                saveBtn.setStyle("-fx-background-color:#4CAF50; -fx-text-fill:white; -fx-background-radius:50; -fx-min-width:40; -fx-min-height:40;");
+
+                Button delBtn = new Button("🗑");
+                delBtn.setStyle("-fx-background-color:#E53935; -fx-text-fill:white; -fx-background-radius:50; -fx-min-width:40; -fx-min-height:40;");
+
+                saveBtn.setVisible(false);
+
+                // ✅ Actions
+                editBtn.setOnAction(e -> {
+                	taskStack.setVisible(false);
+                    editField.setVisible(true);
+                    saveBtn.setVisible(true);
+                });
+
+                saveBtn.setOnAction(e -> {
+                    try {
+                        DBHelper.updateTask(t.getId(), editField.getText());
+                        load();
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                    }
+                });
+
+                delBtn.setOnAction(e -> {
+                    try {
+                        DBHelper.deleteTask(t.getId());
+                        load();
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                    }
+                });
+
+                check.setOnAction(e -> {
+                    try {
+                        DBHelper.toggleTask(t.getId(), check.isSelected());
+                        load();
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                    }
+                });
+
+                // ✅ Left Side (Task Info)
+                VBox taskInfo = new VBox(5, label, dateLabel);
+
+                // ✅ Right Side (Buttons)
+                HBox buttons = new HBox(10, editBtn, saveBtn, delBtn);
+                buttons.setStyle("-fx-alignment: center-right;");
+
+                // ✅ MAIN ROW (FIXED ALIGNMENT)
+                HBox row = new HBox(20, check, taskInfo, priorityLabel, buttons);
+                row.setPadding(new Insets(10));
+
+                HBox.setHgrow(taskInfo, Priority.ALWAYS);
+
+                listView.getItems().add(row);
+            }
+
+            double progress = tasks.size() == 0 ? 0 : (double) completed / tasks.size();
+            progressBar.setProgress(progress);
+            percentLabel.setText((int)(progress * 100) + "% Completed");
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Override
+    public void start(Stage stage) throws Exception {
+
+        DBHelper.createTable();
+
+        Label title = new Label("📋 To-Do App");
+        title.setStyle("-fx-font-size:28px; -fx-text-fill:white;");
+
+        searchField.setPromptText("Search...");
+        searchField.setPrefHeight(40);
+
+        filterBox.getItems().addAll("All", "Completed", "Pending");
+        filterBox.setValue("All");
+
+        TextField input = new TextField();
+        input.setPromptText("New task...");
+        input.setPrefHeight(40);
+
+        ComboBox<String> priorityBox = new ComboBox<>();
+        priorityBox.getItems().addAll("High", "Medium", "Low");
+        priorityBox.setValue("Medium");
+
+        DatePicker datePicker = new DatePicker();
+
+        Button addBtn = new Button("Add");
+        addBtn.setStyle("-fx-background-color:#00c853; -fx-text-fill:white;");
+        addBtn.setPrefHeight(40);
+
+        addBtn.setOnAction(e -> {
+            try {
+                DBHelper.addTask(
+                        input.getText(),
+                        priorityBox.getValue(),
+                        datePicker.getValue() == null ? null :
+                                java.sql.Date.valueOf(datePicker.getValue())
+                );
+                input.clear();
+                load();
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+        });
+
+        HBox inputRow = new HBox(10, input, priorityBox, datePicker, addBtn);
+
+        progressBar.setPrefHeight(20);
+        progressBar.setMaxWidth(Double.MAX_VALUE);
+        percentLabel.setStyle("-fx-text-fill:white;");
+
+        VBox progressBox = new VBox(5, percentLabel, progressBar);
+
+        Button clearBtn = new Button("Clear Completed");
+        clearBtn.setStyle("-fx-background-color:#d32f2f; -fx-text-fill:white;");
+
+        clearBtn.setOnAction(e -> {
+            try {
+                DBHelper.clearCompleted();
+                load();
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+        });
+
+        VBox layout = new VBox(15,
+                title,
+                searchField,
+                filterBox,
+                inputRow,
+                progressBox,
+                clearBtn,
+                listView
+        );
+
+        layout.setPadding(new Insets(20));
+        layout.setStyle("-fx-background-color: linear-gradient(to bottom,#5f72bd,#9b23ea);");
+
+        searchField.setOnKeyReleased(e -> load());
+        filterBox.setOnAction(e -> load());
+
+        stage.setScene(new Scene(layout, 600, 650));
+        stage.setTitle("To-Do App");
+        stage.show();
+
+        load();
+    }
+
+    public static void main(String[] args) {
+        launch();
+    }
+}

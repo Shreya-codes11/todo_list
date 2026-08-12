@@ -1,0 +1,158 @@
+package com.info.tod;
+
+import java.sql.*;
+import java.util.*;
+import java.sql.Date;
+
+public class DBHelper 
+{
+    private static final String URL =
+        "jdbc:mysql://localhost:3306/?user=root";
+    private static final String USER = "root";
+    private static final String PASSWORD = "ayushp123";
+
+    public static Connection connect() throws Exception {
+        return DriverManager.getConnection(URL, USER, PASSWORD);
+    }
+
+    public static void createTable() throws Exception {
+        try (Connection con = connect();
+             Statement st = con.createStatement()) {
+
+            st.executeUpdate(
+                "CREATE TABLE IF NOT EXISTS tasks (" +
+                "id INT AUTO_INCREMENT PRIMARY KEY," +
+                "task VARCHAR(255)," +
+                "completed BOOLEAN," +
+                "priority VARCHAR(10)," +
+                "due_date DATE)"
+            );
+
+            st.executeUpdate(
+                "CREATE TABLE IF NOT EXISTS user_points (" +
+                "id INT PRIMARY KEY," +
+                "points INT DEFAULT 0)"
+            );
+
+            st.executeUpdate(
+                "INSERT INTO user_points (id, points) VALUES (1,0) " +
+                "ON DUPLICATE KEY UPDATE id=id"
+            );
+        }
+    }
+
+    public static void addTask(String task, String priority, Date dueDate) throws Exception {
+        try (Connection con = connect();
+             PreparedStatement ps = con.prepareStatement(
+                     "INSERT INTO tasks(task, completed, priority, due_date) VALUES(?, false, ?, ?)")) {
+
+            ps.setString(1, task);
+            ps.setString(2, priority);
+            ps.setDate(3, dueDate);
+            ps.executeUpdate();
+        }
+    }
+
+    public static List<Task> getTasks() throws Exception {
+        List<Task> list = new ArrayList<>();
+
+        try (Connection con = connect();
+             ResultSet rs = con.createStatement().executeQuery("SELECT * FROM tasks")) {
+
+            while (rs.next()) {
+                list.add(new Task(
+                        rs.getInt("id"),
+                        rs.getString("task"),
+                        rs.getBoolean("completed"),
+                        rs.getString("priority"),
+                        rs.getDate("due_date")
+                ));
+            }
+        }
+        return list;
+    }
+
+    // 🎯 FIXED TOGGLE WITH POINTS
+    public static void toggleTask(int id, boolean status) throws Exception {
+
+        boolean previousStatus = false;
+
+        try (Connection con = connect();
+             PreparedStatement ps = con.prepareStatement(
+                     "SELECT completed FROM tasks WHERE id=?")) {
+
+            ps.setInt(1, id);
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                previousStatus = rs.getBoolean("completed");
+            }
+        }
+
+        try (Connection con = connect();
+             PreparedStatement ps = con.prepareStatement(
+                     "UPDATE tasks SET completed=? WHERE id=?")) {
+
+            ps.setBoolean(1, status);
+            ps.setInt(2, id);
+            ps.executeUpdate();
+        }
+
+        // 🎮 POINTS LOGIC
+        if (!previousStatus && status) {
+            updatePoints(10);
+        } else if (previousStatus && !status) {
+            updatePoints(-10);
+        }
+    }
+
+    public static void updatePoints(int delta) throws Exception {
+        try (Connection con = connect();
+             PreparedStatement ps = con.prepareStatement(
+                     "UPDATE user_points SET points = points + ? WHERE id=1")) {
+
+            ps.setInt(1, delta);
+            ps.executeUpdate();
+        }
+    }
+
+    public static int getPoints() throws Exception {
+        try (Connection con = connect();
+             ResultSet rs = con.createStatement().executeQuery(
+                     "SELECT points FROM user_points WHERE id=1")) {
+
+            if (rs.next()) return rs.getInt("points");
+        }
+        return 0;
+    }
+
+    public static void deleteTask(int id) throws Exception {
+        try (Connection con = connect();
+             PreparedStatement ps = con.prepareStatement(
+                     "DELETE FROM tasks WHERE id=?")) {
+
+            ps.setInt(1, id);
+            ps.executeUpdate();
+        }
+    }
+
+    public static void updateTask(int id, String newTask) throws Exception {
+        try (Connection con = connect();
+             PreparedStatement ps = con.prepareStatement(
+                     "UPDATE tasks SET task=? WHERE id=?")) {
+
+            ps.setString(1, newTask);
+            ps.setInt(2, id);
+            ps.executeUpdate();
+        }
+    }
+
+    public static void clearCompleted() throws Exception {
+        try (Connection con = connect();
+             PreparedStatement ps = con.prepareStatement(
+                     "DELETE FROM tasks WHERE completed=true")) {
+
+            ps.executeUpdate();
+        }
+    }
+}

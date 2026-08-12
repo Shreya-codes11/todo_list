@@ -1,0 +1,138 @@
+package com.info.tod;
+
+import javafx.application.Application;
+import javafx.geometry.Insets;
+import javafx.scene.Scene;
+import javafx.scene.control.*;
+import javafx.scene.layout.*;
+import javafx.scene.paint.Color;
+import javafx.stage.Stage;
+
+public class MainApp extends Application {
+
+    private ListView<Task> listView = new ListView<>();
+    private Label pointsLabel = new Label();
+
+    @Override
+    public void start(Stage stage) {
+
+        Label title = new Label("🔥 Smart To-Do");
+        title.setStyle("-fx-font-size: 24px; -fx-text-fill: white;");
+
+        pointsLabel.setStyle("-fx-font-size: 16px; -fx-text-fill: white;");
+
+        TextField input = new TextField();
+        input.setPromptText("Enter your task...");
+        input.setStyle("-fx-background-radius: 10; -fx-padding: 10;");
+
+        Button addBtn = new Button("Add");
+        addBtn.setStyle(buttonStyle("#4CAF50"));
+
+        addBtn.setOnAction(e -> {
+            try {
+                TaskDAO.addTask(input.getText());
+                input.clear();
+                refresh();
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+        });
+
+        VBox header = new VBox(5, title, pointsLabel);
+        HBox inputBox = new HBox(10, input, addBtn);
+
+        listView.setCellFactory(param -> new ListCell<Task>() {
+            @Override
+            protected void updateItem(Task task, boolean empty) {
+                super.updateItem(task, empty);
+
+                if (empty || task == null) {
+                    setGraphic(null);
+                } else {
+
+                    Label taskTitle = new Label(task.getTitle());
+                    taskTitle.setStyle("-fx-font-size: 16px;");
+
+                    if (task.getStatus().equals("Completed")) {
+                        taskTitle.setStyle("-fx-font-size: 16px; -fx-text-fill: gray; -fx-strikethrough: true;");
+                    }
+
+                    Label status = new Label(task.getStatus());
+                    status.setTextFill(task.getStatus().equals("Completed") ? Color.GREEN : Color.ORANGE);
+
+                    Button completeBtn = new Button("✔");
+                    completeBtn.setStyle(buttonStyle("#2196F3"));
+
+                    completeBtn.setOnAction(e -> {
+                        try {
+                            TaskDAO.completeTask(task.getId());
+                            refresh();
+                        } catch (Exception ex) {
+                            ex.printStackTrace();
+                        }
+                    });
+
+                    Button deleteBtn = new Button("🗑");
+                    deleteBtn.setStyle(buttonStyle("#f44336"));
+
+                    deleteBtn.setOnAction(e -> {
+                        try {
+                            TaskDAO.deleteTask(task.getId());
+                            refresh();
+                        } catch (Exception ex) {
+                            ex.printStackTrace();
+                        }
+                    });
+
+                    HBox actions = new HBox(5, completeBtn, deleteBtn);
+
+                    VBox textBox = new VBox(taskTitle, status);
+
+                    HBox card = new HBox(15, textBox, actions);
+                    card.setPadding(new Insets(10));
+                    card.setStyle(
+                        "-fx-background-color: white;" +
+                        "-fx-background-radius: 10;" +
+                        "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1),5,0,0,2);"
+                    );
+
+                    setGraphic(card);
+                }
+            }
+        });
+
+        VBox root = new VBox(15, header, inputBox, listView);
+        root.setPadding(new Insets(20));
+        root.setStyle(
+            "-fx-background-color: linear-gradient(to bottom, #667eea, #764ba2);"
+        );
+
+        Scene scene = new Scene(root, 500, 600);
+
+        stage.setTitle("Smart To-Do");
+        stage.setScene(scene);
+        stage.show();
+
+        refresh();
+    }
+
+    private String buttonStyle(String color) {
+        return "-fx-background-color: " + color + ";" +
+               "-fx-text-fill: white;" +
+               "-fx-background-radius: 8;" +
+               "-fx-padding: 5 10;";
+    }
+
+    private void refresh() {
+        try {
+            listView.getItems().setAll(TaskDAO.getTasks());
+            pointsLabel.setText("🏆 Points: " + TaskDAO.getTotalPoints());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void main(String[] args) {
+        launch();
+    }
+}
