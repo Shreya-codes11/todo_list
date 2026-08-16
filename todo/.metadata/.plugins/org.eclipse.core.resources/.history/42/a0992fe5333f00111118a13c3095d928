@@ -1,0 +1,29 @@
+package com.info.tod;
+
+import java.sql.Date;
+
+public class Task {
+
+    private int id;
+    private String task;
+    private boolean completed;
+    private String priority;
+    private Date dueDate;
+    private int points;
+
+    public Task(int id, String task, boolean completed, String priority, Date dueDate, int points) {
+        this.id = id;
+        this.task = task;
+        this.completed = completed;
+        this.priority = priority;
+        this.dueDate = dueDate;
+        this.points = points;
+    }
+
+    public int getId() { return id; }
+    public String getTask() { return task; }
+    public boolean isCompleted() { return completed; }
+    public String getPriority() { return priority; }
+    public Date getDueDate() { return dueDate; }
+    public int getPoints() { return points; }
+}

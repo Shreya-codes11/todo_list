@@ -1,0 +1,22 @@
+public static void completeTask(int id) throws Exception {
+    Connection con = DBConnection.getConnection();
+    String query = "UPDATE tasks SET status='Completed', points=10 WHERE id=?";
+    PreparedStatement ps = con.prepareStatement(query);
+    ps.setInt(1, id);
+    ps.executeUpdate();
+    con.close();
+}
+
+public static int getTotalPoints() throws Exception {
+    Connection con = DBConnection.getConnection();
+    Statement st = con.createStatement();
+    ResultSet rs = st.executeQuery("SELECT SUM(points) as total FROM tasks");
+
+    int total = 0;
+    if (rs.next()) {
+        total = rs.getInt("total");
+    }
+
+    con.close();
+    return total;
+}
